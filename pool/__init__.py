@@ -3,7 +3,7 @@ from torch.autograd import Function
 from torch.autograd.function import once_differentiable
 from torch.nn.modules.utils import _pair
 
-from ._C import max_pool_forward
+from ._C import max_pool_forward, lse_pool_forward
 
 
 def _to_h_w(param):
@@ -24,6 +24,24 @@ class _MaxPool(Function):
         return output
 
 max_pool = _MaxPool.apply
+
+
+class _LSEPool(Function):
+    @staticmethod
+    def forward(ctx, input, r, kernel_size, stride, padding):
+        kernel_h, kernel_w = _to_h_w(kernel_size)
+        stride_h, stride_w = _to_h_w(stride)
+        pad_h, pad_w = _to_h_w(padding)
+        pooled_height = int(1 + (input.shape[2] + 2*pad_h - kernel_h) / stride_h)
+        pooled_width = int(1 + (input.shape[3] + 2*pad_w - kernel_w) / stride_w)
+        output = lse_pool_forward(
+            input, r, pooled_height, pooled_width, kernel_h, kernel_w, stride_h, stride_w, pad_h, pad_w
+        )
+        return output
+
+
+lse_pool = _LSEPool.apply
+
 
 # class MaxPool(nn.Module):
 #     def __init__(self, kernel_size, stride, padding):
